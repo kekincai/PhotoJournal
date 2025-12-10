@@ -6,7 +6,8 @@ struct HomeView: View {
 
     // Group entries by date
     private var groupedEntries: [(String, [(String, [JournalEntry])])] {
-        let calendar = Calendar.current
+        var calendar = Calendar.current
+        calendar.locale = Locale(identifier: "zh_CN")
 
         let byYear = Dictionary(grouping: photoLibraryManager.journalEntries) { entry in
             calendar.component(.year, from: entry.date)
@@ -47,7 +48,7 @@ struct HomeView: View {
                     HStack(spacing: 8) {
                         Text("📓")
                             .font(.title2)
-                        Text("My Photo Journal")
+                        Text("我的照片日记")
                             .font(.custom("Noteworthy-Bold", size: 22))
                             .foregroundColor(Color(red: 0.4, green: 0.3, blue: 0.25))
                     }
@@ -117,11 +118,11 @@ struct PermissionRequestView: View {
             }
 
             VStack(spacing: 12) {
-                Text("Let's Start Journaling!")
+                Text("开始记录美好时光！")
                     .font(.custom("Noteworthy-Bold", size: 28))
                     .foregroundColor(Color(red: 0.4, green: 0.3, blue: 0.25))
 
-                Text("Allow access to your photos to create beautiful memory pages ✨")
+                Text("允许访问您的照片，创建美好的回忆页面 ✨")
                     .font(.custom("Noteworthy", size: 16))
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
@@ -131,7 +132,7 @@ struct PermissionRequestView: View {
             Button(action: onRequestPermission) {
                 HStack {
                     Text("📷")
-                    Text("Allow Photo Access")
+                    Text("允许访问照片")
                         .font(.custom("Noteworthy-Bold", size: 18))
                 }
                 .foregroundColor(.white)
@@ -162,10 +163,10 @@ struct EmptyStateView: View {
         VStack(spacing: 20) {
             Text("📭")
                 .font(.system(size: 60))
-            Text("No Photos Yet")
+            Text("暂无照片")
                 .font(.custom("Noteworthy-Bold", size: 24))
                 .foregroundColor(Color(red: 0.4, green: 0.3, blue: 0.25))
-            Text("Your journal pages will appear here")
+            Text("您的日记页面将显示在这里")
                 .font(.custom("Noteworthy", size: 16))
                 .foregroundColor(.secondary)
         }
@@ -232,7 +233,7 @@ struct MonthSection: View {
 
                 Spacer()
 
-                Text("\(entries.count) pages")
+                Text("\(entries.count) 张")
                     .font(.custom("Noteworthy", size: 14))
                     .foregroundColor(.secondary)
             }
@@ -275,12 +276,14 @@ struct JournalCard: View {
 
     private var dayString: String {
         let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "zh_CN")
         formatter.dateFormat = "d"
         return formatter.string(from: entry.date)
     }
 
     private var weekdayString: String {
         let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "zh_CN")
         formatter.dateFormat = "EEE"
         return formatter.string(from: entry.date)
     }
@@ -333,7 +336,7 @@ struct JournalCard: View {
             // Journal Text
             VStack(alignment: .leading, spacing: 8) {
                 if entry.text.isEmpty {
-                    Text("Tap to write...")
+                    Text("暂无说明")
                         .font(.custom("Noteworthy", size: 14))
                         .foregroundColor(.secondary)
                         .italic()
@@ -345,13 +348,6 @@ struct JournalCard: View {
                 }
 
                 Spacer()
-
-                // Sticker indicator
-                HStack {
-                    Spacer()
-                    Text(entry.text.isEmpty ? "✏️" : "✅")
-                        .font(.caption)
-                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }

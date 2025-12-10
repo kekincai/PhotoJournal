@@ -2,14 +2,8 @@ import Photos
 import SwiftUI
 
 struct JournalDetailView: View {
-    @State var entry: JournalEntry
-    @EnvironmentObject var photoLibraryManager: PhotoLibraryManager
+    let entry: JournalEntry
     @State private var fullImage: UIImage? = nil
-    @State private var isEditing = false
-    @State private var editedText: String = ""
-    @State private var isSaving = false
-    @State private var saveMessage: String? = nil
-    @Environment(\.dismiss) var dismiss
 
     var body: some View {
         ZStack {
@@ -24,27 +18,8 @@ struct JournalDetailView: View {
                     // Date header
                     DateHeaderView(date: entry.date)
 
-                    // Journal writing area
-                    JournalWritingArea(
-                        text: $editedText,
-                        isEditing: $isEditing,
-                        originalText: entry.text
-                    )
-
-                    // Save button
-                    if isEditing || editedText != entry.text {
-                        SaveButton(isSaving: isSaving) {
-                            saveJournal()
-                        }
-                    }
-
-                    // Status message
-                    if let message = saveMessage {
-                        Text(message)
-                            .font(.custom("Noteworthy", size: 14))
-                            .foregroundColor(.green)
-                            .transition(.opacity)
-                    }
+                    // Journal display area (read-only)
+                    JournalDisplayArea(text: entry.text)
 
                     Spacer(minLength: 50)
                 }
@@ -54,37 +29,13 @@ struct JournalDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
-                Text("✏️ My Memory")
+                Text("📖 我的回忆")
                     .font(.custom("Noteworthy-Bold", size: 20))
                     .foregroundColor(Color(red: 0.4, green: 0.3, blue: 0.25))
             }
         }
         .onAppear {
             loadFullImage()
-            editedText = entry.text
-        }
-    }
-
-    private func saveJournal() {
-        isSaving = true
-        saveMessage = nil
-
-        photoLibraryManager.saveCaption(for: entry.asset, caption: editedText) { success, error in
-            isSaving = false
-            if success {
-                entry.text = editedText
-                isEditing = false
-                withAnimation {
-                    saveMessage = "✨ Saved to photo!"
-                }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                    withAnimation {
-                        saveMessage = nil
-                    }
-                }
-            } else {
-                saveMessage = "❌ Error: \(error?.localizedDescription ?? "Unknown")"
-            }
         }
     }
 
@@ -139,6 +90,13 @@ struct NotebookDetailBackground: View {
 struct PolaroidPhotoView: View {
     let image: UIImage?
     let date: Date
+    
+    private var formattedDate: String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "zh_CN")
+        formatter.dateFormat = "yyyy年 M月 d日"
+        return formatter.string(from: date)
+    }
 
     var body: some View {
         ZStack {
@@ -163,7 +121,7 @@ struct PolaroidPhotoView: View {
                 .clipped()
 
                 // Date caption
-                Text(date, style: .date)
+                Text(formattedDate)
                     .font(.custom("Noteworthy", size: 14))
                     .foregroundColor(.secondary)
                     .padding(.bottom, 8)
@@ -196,7 +154,8 @@ struct DateHeaderView: View {
 
     private var formattedDate: String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "EEEE, MMMM d, yyyy"
+        formatter.locale = Locale(identifier: "zh_CN")
+        formatter.dateFormat = "yyyy年 M月 d日 EEEE"
         return formatter.string(from: date)
     }
 
@@ -216,30 +175,20 @@ struct DateHeaderView: View {
     }
 }
 
-// MARK: - Journal Writing Area
-struct JournalWritingArea: View {
-    @Binding var text: String
-    @Binding var isEditing: Bool
-    let originalText: String
+// MARK: - Journal Display Area (Read-Only)
+struct JournalDisplayArea: View {
+    let text: String
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("✍️ My Journal")
+                Text("📖 照片说明")
                     .font(.custom("Noteworthy-Bold", size: 20))
                     .foregroundColor(Color(red: 0.4, green: 0.3, blue: 0.25))
                 Spacer()
-
-                if !isEditing && !originalText.isEmpty {
-                    Button(action: { isEditing = true }) {
-                        Text("Edit ✏️")
-                            .font(.custom("Noteworthy", size: 14))
-                            .foregroundColor(.blue)
-                    }
-                }
             }
 
-            // Writing area with notebook style
+            // Display area with notebook style
             ZStack(alignment: .topLeading) {
                 // Background lines
                 VStack(spacing: 28) {
@@ -251,25 +200,19 @@ struct JournalWritingArea: View {
                 }
                 .padding(.top, 22)
 
-                if text.isEmpty && !isEditing {
-                    Text("Tap here to write your thoughts... ✨")
+                if text.isEmpty {
+                    Text("这张照片暂无说明 📷")
                         .font(.custom("Noteworthy", size: 16))
                         .foregroundColor(.secondary)
+                        .italic()
                         .padding(.top, 8)
                         .padding(.horizontal, 4)
-                        .onTapGesture {
-                            isEditing = true
-                        }
                 } else {
-                    TextEditor(text: $text)
+                    Text(text)
                         .font(.custom("Noteworthy", size: 16))
                         .foregroundColor(Color(red: 0.3, green: 0.25, blue: 0.2))
-                        .scrollContentBackground(.hidden)
-                        .background(Color.clear)
-                        .frame(minHeight: 200)
-                        .onTapGesture {
-                            isEditing = true
-                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(8)
                 }
             }
             .padding()
@@ -283,42 +226,5 @@ struct JournalWritingArea: View {
                     .stroke(Color.pink.opacity(0.3), lineWidth: 2)
             )
         }
-    }
-}
-
-// MARK: - Save Button
-struct SaveButton: View {
-    let isSaving: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack {
-                if isSaving {
-                    ProgressView()
-                        .tint(.white)
-                } else {
-                    Text("💾")
-                }
-                Text(isSaving ? "Saving..." : "Save Journal")
-                    .font(.custom("Noteworthy-Bold", size: 18))
-            }
-            .foregroundColor(.white)
-            .frame(maxWidth: .infinity)
-            .padding()
-            .background(
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.pink, Color.orange],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .shadow(color: .pink.opacity(0.4), radius: 8, y: 4)
-            )
-        }
-        .disabled(isSaving)
-        .padding(.horizontal)
     }
 }
